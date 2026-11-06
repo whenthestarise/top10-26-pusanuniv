@@ -15,6 +15,16 @@ criterion_weight_bounds:
   maximum: 1.1
   initial: 1.0
 
+# 선택 횟수의 최솟값을 0.9, 최댓값을 1.1로 선형 환산
+criterion_weight_calculation:
+  method: min_max_selection_count
+  basis: selection_count
+
+  # 모든 항목의 선택 횟수가 같으면 전부 1.0 적용
+  equal_counts_weight: 1.0
+
+  formula: "minimum + (maximum - minimum) * (count - min_count) / (max_count - min_count)"
+
 collection_policy:
   scope: "대상 직무와 실제 근무 사업장을 명시"
   evidence: "자료의 출처, 기준일, 평가 이유를 기록"
