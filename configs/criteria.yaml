@@ -1,0 +1,134 @@
+schema_version: "2.0"
+
+# 아래 점수 간격은 사람이 평가하는 세부항목에 적용합니다.
+# 연봉 백분위나 세부항목의 가중평균 결과는 소수점이 가능합니다.
+rating_scale:
+  minimum: 0
+  maximum: 100
+  allowed_values: [0, 25, 50, 75, 100]
+  missing_policy: "근거가 없으면 빈칸. 0점이나 50점으로 대신 채우지 않음."
+
+# 이후 학습할 7개 기준 가중치의 범위입니다.
+# 이 설정만 작성한다고 학습이 실행되지는 않습니다.
+criterion_weight_bounds:
+  minimum: 0.9
+  maximum: 1.1
+  initial: 1.0
+
+collection_policy:
+  scope: "대상 직무와 실제 근무 사업장을 명시"
+  evidence: "자료의 출처, 기준일, 평가 이유를 기록"
+  missing_submetrics: "세부항목이 빠진 기준은 종합점수 계산 보류"
+
+criteria:
+  - id: salary
+    name: 높은 급여
+    collection_required: false
+    output_score_column: salary_score
+    note: "1단계 백분위 점수는 임시값. 연봉 기준연도와 집계 대상 확인 필요."
+
+  - id: infrastructure
+    name: 근무 지역 인프라
+    collection_required: true
+    output_score_column: infrastructure_score
+    submetrics:
+      - id: transit_access
+        name: 대중교통 접근성
+        aggregation_weight: 0.34
+        scoring_guide: "0=접근 매우 어려움, 25=불편, 50=보통, 75=편리, 100=매우 편리. 사업장 기준 도보시간·운행빈도 기록."
+
+      - id: housing_accessibility
+        name: 주거 접근성과 비용
+        aggregation_weight: 0.33
+        scoring_guide: "0=부담 매우 큼, 25=큼, 50=보통, 75=낮음, 100=매우 낮음. 동일 주거 유형·통근 범위로 비교."
+
+      - id: daily_life_access
+        name: 생활·의료·문화 인프라
+        aggregation_weight: 0.33
+        scoring_guide: "0=매우 부족, 25=부족, 50=기본 시설 확보, 75=다양한 시설 확보, 100=접근성 매우 우수."
+
+  - id: work_life_balance
+    name: 워라밸
+    collection_required: true
+    output_score_column: work_life_balance_score
+    submetrics:
+      - id: working_hours
+        name: 실제 주당 근로시간
+        aggregation_weight: 0.34
+        scoring_guide: "양수인 실제 주당 평균시간 기준. 100=40시간 이하, 75=40시간 초과~43시간 이하, 50=43시간 초과~46시간 이하, 25=46시간 초과~50시간 이하, 0=50시간 초과. 미확인은 빈칸."
+
+      - id: leave_flexibility
+        name: 휴가 사용과 근무 유연성
+        aggregation_weight: 0.33
+        scoring_guide: "0=사용 매우 어려움, 25=제약 많음, 50=보통, 75=사용 편리, 100=사용 편리하고 근무 유연성도 높음. 제도 유무와 실제 사용 구분."
+
+      - id: employee_wlb_evidence
+        name: 재직자 워라밸 평가
+        aggregation_weight: 0.33
+        scoring_guide: "0=매우 부정적, 25=부정적 우세, 50=긍정·부정 혼재, 75=긍정적 우세, 100=매우 긍정적. 리뷰 수·작성 시기·직군 기록."
+
+  - id: ai_resilience
+    name: AI 대체 안전성
+    collection_required: false
+    output_score_column: ai_resilience_score
+    note: "1단계 범주 변환 점수는 임시값. 실제 대체 확률이 아니며 직무별 근거 검증 필요."
+
+  - id: job_outlook
+    name: 직무 유망성
+    collection_required: true
+    output_score_column: job_outlook_score
+    submetrics:
+      - id: industry_growth
+        name: 산업 성장 전망
+        aggregation_weight: 0.34
+        scoring_guide: "0=큰 폭 축소, 25=축소, 50=정체, 75=성장, 100=높은 성장 전망. 비교 기간과 전망 출처 통일."
+
+      - id: company_investment_growth
+        name: 기업 성장과 투자
+        aggregation_weight: 0.33
+        scoring_guide: "0=큰 폭 축소, 25=감소, 50=유지, 75=증가, 100=지속적인 확대. 매출·설비·R&D 등 사용 지표 명시."
+
+      - id: hiring_demand
+        name: 대상 직무 채용 수요
+        aggregation_weight: 0.33
+        scoring_guide: "0=수요 크게 감소, 25=감소, 50=유지, 75=증가, 100=지속적인 확대. 공고 재게시와 이직에 따른 반복 채용 구분."
+
+  - id: horizontal_culture
+    name: 수평적 조직문화
+    collection_required: true
+    output_score_column: horizontal_culture_score
+    submetrics:
+      - id: communication_openness
+        name: 의사소통 개방성
+        aggregation_weight: 0.34
+        scoring_guide: "0=매우 폐쇄적, 25=폐쇄적, 50=보통, 75=개방적, 100=매우 개방적. 의견 제안과 상향 소통의 실제 사례 확인."
+
+      - id: autonomy_participation
+        name: 업무 자율성과 의사결정 참여
+        aggregation_weight: 0.33
+        scoring_guide: "0=매우 낮음, 25=낮음, 50=보통, 75=높음, 100=매우 높음. 동일 직군·경력 수준으로 비교."
+
+      - id: fairness_psychological_safety
+        name: 공정성과 심리적 안전
+        aggregation_weight: 0.33
+        scoring_guide: "0=매우 부정적, 25=부정적 우세, 50=혼재, 75=긍정적 우세, 100=매우 긍정적. 평가 공정성과 의견 표현에 대한 근거 기록."
+
+  - id: career_capital
+    name: 경력 확보
+    collection_required: true
+    output_score_column: career_capital_score
+    submetrics:
+      - id: training_support
+        name: 교육과 자격 지원
+        aggregation_weight: 0.34
+        scoring_guide: "0=지원 없음 확인, 25=제한적 교육, 50=기본 직무교육, 75=체계적 교육과 외부교육 지원, 100=체계적 교육과 충분한 시간·비용 지원."
+
+      - id: skill_transferability
+        name: 직무 기술의 시장 활용성
+        aggregation_weight: 0.33
+        scoring_guide: "0=기업 내부에 한정, 25=일부 유사업무에 활용, 50=동일 업종에 활용, 75=여러 업종에 활용, 100=다양한 산업에서 수요 높은 전문 기술."
+
+      - id: project_growth_opportunity
+        name: 프로젝트와 성장 기회
+        aggregation_weight: 0.33
+        scoring_guide: "0=성장 기회 매우 제한, 25=제한적, 50=일반적 직무 경험, 75=다양한 프로젝트 참여, 100=고난도 프로젝트와 책임 확대 기회 풍부."

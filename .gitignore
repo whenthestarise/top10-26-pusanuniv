@@ -1,0 +1,28 @@
+# Python 가상환경과 캐시
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# 비밀번호·API 키 등 환경 설정
+.env
+.env.*
+!.env.example
+
+# 원본 및 생성 데이터: 우선 코드를 공유하고 데이터는 별도 관리
+data/
+reports/
+
+# 학습 모델 및 실행 로그
+models/
+checkpoints/
+logs/
+*.pt
+*.pth
+*.safetensors
+
+# 운영체제 임시 파일
+Thumbs.db
+.DS_Store
+~$*
