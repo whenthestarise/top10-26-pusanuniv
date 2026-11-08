@@ -1,0 +1,89 @@
+schema_version: "1.0"
+model_id: "document_relative_index_v1"
+
+reference:
+  document: "직업만족도_AI분석_자료와프롬프트.pdf"
+  document_date: "2026-11-08"
+
+population:
+  original_rows: 150
+  salary_available_rows: 135
+  salary_missing_rows: 15
+  duplicate_rows_excluded: 1
+  expected_calculation_units: 134
+  note: "계산 단위 수이며, 선정 자격이 검증된 기업 수는 아님."
+
+salary:
+  unit: "만원/년"
+  baseline: 7150.0
+  baseline_method: "문서에 제시된 중앙값"
+  formula: "annual_salary_manwon / baseline"
+  baseline_verification: "기업 원자료를 연결한 뒤 재검산 필요"
+
+survey:
+  response_count: 139
+  response_policy: "all"
+  important_total: 408
+  unimportant_total: 138
+  coefficient: 0.1
+
+  # 이전의 min-max 환산식과 다른 공식입니다.
+  formula: "1 + coefficient * important_ratio - coefficient * unimportant_ratio"
+
+criteria:
+  - id: salary
+    name: 높은 급여
+    active: true
+    important_count: 99
+    unimportant_count: 5
+
+  - id: work_life_balance
+    name: 워라밸
+    active: true
+    important_count: 94
+    unimportant_count: 9
+
+  - id: infrastructure
+    name: 근무 지역 인프라
+    active: true
+    important_count: 73
+    unimportant_count: 12
+
+  - id: job_outlook
+    name: 직무 유망성
+    active: true
+    important_count: 54
+    unimportant_count: 9
+
+  - id: career_capital
+    name: 경력 확보
+    active: false
+    important_count: 41
+    unimportant_count: 9
+
+  - id: ai_resilience
+    name: AI 대체 안전성
+    survey_label: "AI대체 가능성"
+    active: true
+    important_count: 29
+    unimportant_count: 22
+
+  - id: horizontal_culture
+    name: 수평적 조직문화
+    active: false
+    important_count: 18
+    unimportant_count: 72
+
+normalization:
+  non_salary: "동일 직무·범위의 공통 비교집합에서 항목 평균으로 나눔"
+  missing_policy: "결측값 대입 금지. 활성 5개 기준이 모두 있어야 종합 계산."
+  ai_direction: "위험이 낮을수록 높은 안전성 점수"
+  ai_grade_conversion: "확정 점수로 자동 변환하지 않음"
+
+output:
+  weighted_sum: "T = sum(weight * index)"
+  relative_index: "I = T / sum(active_weights)"
+  display_index: "P = 100 * I"
+  salary_equivalent: "M = baseline * I"
+  upper_bound: null
+  note: "상대지수와 모형상 연봉 환산값이며 실제 만족도 측정값·지급 임금이 아님."
