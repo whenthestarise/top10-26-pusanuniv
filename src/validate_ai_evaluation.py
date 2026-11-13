@@ -113,7 +113,7 @@ def validate_evaluation(payload, config):
         score = result.get("score")
         evidence = result.get("evidence")
 
-        if status not in STATUSES:
+        if not isinstance(status, str) or status not in STATUSES:
             errors.append(prefix + "허용되지 않은 상태입니다.")
 
         if not has_text(result.get("reason")):
@@ -159,6 +159,13 @@ def validate_evaluation(payload, config):
 
             if normalize_text(quote) not in normalize_text(source_text):
                 errors.append(prefix + "인용 문장이 수집 원문에 없습니다.")
+
+    # 하나라도 검사에 실패하면 계산에 사용할 점수를 반환하지 않습니다.
+    if errors: 
+        return errors, {
+            criterion_id: None
+            for criterion_id in CRITERIA
+        }            
 
     return errors, scores
 
