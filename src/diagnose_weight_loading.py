@@ -11,7 +11,6 @@ def main():
         "torch",
         "transformers",
         "safetensors",
-        "bitsandbytes",
     ):
         print(f"{package}: {version(package)}", flush=True)
 
@@ -45,6 +44,7 @@ def main():
             str(path),
             framework="pt",
             device="cpu",
+            backend="pread",
         ) as file:
             for key in file.keys():
                 tensor = file.get_tensor(key)

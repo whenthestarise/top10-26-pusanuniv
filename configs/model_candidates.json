@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "verified_on": "2026-11-15",
+  "candidates": [
+    {
+      "candidate_id": "qwen3_4b_instruct",
+      "model_id": "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+      "revision": "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
+      "backend": "mlx",
+      "weights_bytes": 2263022417,
+      "source_url": "https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit",
+      "original_model_url": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507"
+    },
+    {
+      "candidate_id": "qwen35_2b",
+      "model_id": "mlx-community/Qwen3.5-2B-4bit",
+      "revision": "674aaa7240b91e8012fcad5d791b7dfe5ba90207",
+      "backend": "mlx",
+      "weights_bytes": 1722271785,
+      "source_url": "https://huggingface.co/mlx-community/Qwen3.5-2B-4bit",
+      "original_model_url": "https://huggingface.co/Qwen/Qwen3.5-2B"
+    }
+  ]
+}

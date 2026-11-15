@@ -1,0 +1,166 @@
+{
+  "result_type": "model_based_evaluation",
+  "label": "모델 평가 결과",
+  "score_type": "model_interpretation",
+  "empirical_accuracy_validated": false,
+  "calculation_checked": true,
+  "candidate_count": 50,
+  "comparison_count": 48,
+  "region_counts": {
+    "부산": 6,
+    "울산": 3,
+    "경남": 1
+  },
+  "top10": [
+    {
+      "rank": 1,
+      "company_id": "selected50:011",
+      "company_name": "리노공업",
+      "region": "부산",
+      "annual_salary_manwon": 11707.0,
+      "model_scores": {
+        "work_life_balance": 3.3,
+        "infrastructure": 4.0,
+        "job_outlook": 4,
+        "ai_resilience": 3
+      },
+      "salary_index": 1.6373426573426573,
+      "composite_index": 116.1742938884366
+    },
+    {
+      "rank": 2,
+      "company_id": "selected50:003",
+      "company_name": "SNT모티브",
+      "region": "부산",
+      "annual_salary_manwon": 8613.0,
+      "model_scores": {
+        "work_life_balance": 3.3,
+        "infrastructure": 4.0,
+        "job_outlook": 4,
+        "ai_resilience": 4
+      },
+      "salary_index": 1.2046153846153846,
+      "composite_index": 113.27679659311869
+    },
+    {
+      "rank": 3,
+      "company_id": "selected50:024",
+      "company_name": "경동도시가스",
+      "region": "울산",
+      "annual_salary_manwon": 9700.0,
+      "model_scores": {
+        "work_life_balance": 3.3,
+        "infrastructure": 4.0,
+        "job_outlook": 3,
+        "ai_resilience": 4
+      },
+      "salary_index": 1.3566433566433567,
+      "composite_index": 110.47578773792573
+    },
+    {
+      "rank": 4,
+      "company_id": "selected50:033",
+      "company_name": "대원강업",
+      "region": "울산",
+      "annual_salary_manwon": 9411.0,
+      "model_scores": {
+        "work_life_balance": 3.3,
+        "infrastructure": 4.0,
+        "job_outlook": 4,
+        "ai_resilience": 3
+      },
+      "salary_index": 1.3162237762237763,
+      "composite_index": 109.67683152394955
+    },
+    {
+      "rank": 5,
+      "company_id": "selected50:014",
+      "company_name": "유니크",
+      "region": "부산",
+      "annual_salary_manwon": 7214.0,
+      "model_scores": {
+        "work_life_balance": 3.0,
+        "infrastructure": 4.0,
+        "job_outlook": 4,
+        "ai_resilience": 4
+      },
+      "salary_index": 1.008951048951049,
+      "composite_index": 107.44314852878247
+    },
+    {
+      "rank": 6,
+      "company_id": "selected50:004",
+      "company_name": "파나시아",
+      "region": "부산",
+      "annual_salary_manwon": 8168.0,
+      "model_scores": {
+        "work_life_balance": 3.5,
+        "infrastructure": 4.0,
+        "job_outlook": 3,
+        "ai_resilience": 4
+      },
+      "salary_index": 1.1423776223776223,
+      "composite_index": 107.39011340407188
+    },
+    {
+      "rank": 7,
+      "company_id": "selected50:045",
+      "company_name": "지엠비코리아",
+      "region": "경남",
+      "annual_salary_manwon": 8461.0,
+      "model_scores": {
+        "work_life_balance": 3.3,
+        "infrastructure": 4.0,
+        "job_outlook": 4,
+        "ai_resilience": 3
+      },
+      "salary_index": 1.1833566433566434,
+      "composite_index": 106.98842157348669
+    },
+    {
+      "rank": 8,
+      "company_id": "selected50:026",
+      "company_name": "KPX케미칼",
+      "region": "울산",
+      "annual_salary_manwon": 8014.0,
+      "model_scores": {
+        "work_life_balance": 3.3,
+        "infrastructure": 4.0,
+        "job_outlook": 3,
+        "ai_resilience": 4
+      },
+      "salary_index": 1.1208391608391608,
+      "composite_index": 105.70456755215693
+    },
+    {
+      "rank": 9,
+      "company_id": "selected50:019",
+      "company_name": "태광후지킨",
+      "region": "부산",
+      "annual_salary_manwon": 5821.0,
+      "model_scores": {
+        "work_life_balance": 3.3,
+        "infrastructure": 4.0,
+        "job_outlook": 4,
+        "ai_resilience": 4
+      },
+      "salary_index": 0.8141258741258741,
+      "composite_index": 105.37570124396893
+    },
+    {
+      "rank": 10,
+      "company_id": "selected50:012",
+      "company_name": "오리엔탈정공",
+      "region": "부산",
+      "annual_salary_manwon": 7200.0,
+      "model_scores": {
+        "work_life_balance": 3.5,
+        "infrastructure": 4.0,
+        "job_outlook": 3,
+        "ai_resilience": 4
+      },
+      "salary_index": 1.006993006993007,
+      "composite_index": 104.65076515981079
+    }
+  ]
+}

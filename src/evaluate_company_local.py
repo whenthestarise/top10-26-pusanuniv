@@ -1,8 +1,5 @@
 from __future__ import annotations
-from functools import partial
-from unittest.mock import patch
 
-import safetensors
 import argparse
 import json
 import time
@@ -11,18 +8,45 @@ from pathlib import Path
 import torch
 import yaml
 from transformers import (
-    AutoModelForCausalLM,
     AutoTokenizer,
-    BitsAndBytesConfig,
     set_seed,
 )
 
-from validate_ai_evaluation import validate_evaluation
+if __package__:
+    from .llm_runtime import (
+        DEVICE_CHOICES,
+        current_allocated_gib,
+        load_model,
+        peak_allocated_gib,
+        print_memory_info,
+        print_runtime_info,
+        reset_memory_stats,
+        select_device,
+        synchronize,
+    )
+else:
+    from llm_runtime import (
+        DEVICE_CHOICES,
+        current_allocated_gib,
+        load_model,
+        peak_allocated_gib,
+        print_memory_info,
+        print_runtime_info,
+        reset_memory_stats,
+        select_device,
+        synchronize,
+    )
+
+if __package__:
+    from .validate_ai_evaluation import validate_evaluation
+else:
+    from validate_ai_evaluation import validate_evaluation
 
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "configs" / "ai_evaluation.yaml"
 MODEL_ID = "Qwen/Qwen3-1.7B"
+PROMPT_VERSION = "evaluation_v2_no_prefilled_answer"
 
 
 def resolve_path(path):
@@ -48,11 +72,47 @@ def parse_response(answer):
     return result
 
 
+def build_output_contract(config, context):
+    """형식과 제약만 명시하고 기본 평가 답안은 제공하지 않습니다."""
+    return {
+        "rubric_version": config["rubric_version"],
+        **{field: context[field] for field in config["scope"]["required"]},
+        "criteria": {
+            key: {
+                "status": "문자열: assessed / insufficient_evidence / conflicting_evidence 중 근거에 맞는 값",
+                "score": "assessed이면 1~5 정수, 보류 상태이면 null",
+                "reason": "해당 항목의 판단 근거를 구체적인 한국어 1~2문장으로 설명",
+                "evidence": (
+                    "인용 객체 배열. 각 객체의 키는 source_id와 quote. "
+                    "assessed이면 관련 원문 인용이 1개 이상 필요하며 인용할 자료가 없으면 빈 배열"
+                ),
+            }
+            for key in config["criteria"]
+        },
+    }
+
+
+def build_user_prompt(config, context, sources):
+    return (
+        "평가표:\n"
+        + yaml.safe_dump(
+            {"rating_scale": config["rating_scale"], "criteria": config["criteria"]},
+            allow_unicode=True, sort_keys=False,
+        )
+        + "\n입력 자료:\n"
+        + json.dumps({"context": context, "sources": sources}, ensure_ascii=False)
+        + "\n출력 형식 명세(output_contract):\n"
+        + json.dumps(build_output_contract(config, context), ensure_ascii=False)
+    )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--device", choices=DEVICE_CHOICES, default="auto")
     args = parser.parse_args()
+    device = select_device(args.device)
 
     input_path = resolve_path(args.input)
     output_path = resolve_path(args.output)
@@ -81,8 +141,18 @@ def main():
     if not isinstance(context, dict) or not isinstance(sources, list):
         parser.error("context 객체와 sources 배열이 필요합니다.")
 
-    # LLM에 전달할 기본 응답 구조입니다.
-    # 초기값은 점수 없음이며, 자료를 근거로 평가한 경우에만 변경합니다.
+    if bundle["dataset_type"] == "real":
+        if __package__:
+            from .data_policy import validate_user_sources, enforce_evaluation_population
+        else:
+            from data_policy import validate_user_sources, enforce_evaluation_population
+        try:
+            enforce_evaluation_population(bundle)
+            validate_user_sources(bundle)
+        except (ValueError, OSError, KeyError, TypeError) as exc:
+            parser.error(str(exc))
+
+    # 모델 로딩 전 입력 검사용입니다. 이 기본 답안을 LLM에 전달하지 않습니다.
     template = {
         "rubric_version": config["rubric_version"],
         **{
@@ -130,77 +200,31 @@ def main():
 10. 제공된 출처 ID만 사용한다. 인용문을 바꾸거나 만들어내지 않는다.
 11. 점수는 AI의 모형상 판단이며 실제 만족도나 대체 확률이 아니다.
 12. 최종점수나 순위를 계산하지 않는다.
-13. 제시된 응답 구조의 JSON 객체 하나만 출력한다.
+13. 출력 형식 명세(output_contract)에 맞는 평가 결과 JSON 객체 하나만 출력한다.
+    형식 명세 자체를 답변으로 복사하지 않는다.
     코드 블록이나 JSON 밖의 설명은 출력하지 않는다.
 14. reason은 한국어 1~2문장으로 간결하게 작성한다.
-15. 응답 구조의 초기값을 그대로 복사하지 말고 각 항목의 근거를 독립적으로 검토한다.
+15. 각 항목의 근거를 독립적으로 검토하고, 판단에 사용한 구체적인 내용을 쓴다.
 16. 평가표에 따른 판단에 충분한 관련 근거가 있으면 assessed로 평가한다.
     실제 대체 확률이 없다는 이유만으로 AI 안전성의 정성 평가를 보류하지 않는다.
 17. 보류 이유에는 제공된 자료로 확인한 내용과 추가로 필요한 정보를 구체적으로 쓴다.
     '자료가 부족합니다'라는 문장만 반복하지 않는다.
 """
 
-    user_prompt = (
-        "평가표:\n"
-        + yaml.safe_dump(
-            {
-                "rating_scale": config["rating_scale"],
-                "criteria": config["criteria"],
-            },
-            allow_unicode=True,
-            sort_keys=False,
-        )
-        + "\n입력 자료:\n"
-        + json.dumps(
-            {"context": context, "sources": sources},
-            ensure_ascii=False,
-        )
-        + "\n응답 구조:\n"
-        + json.dumps(template, ensure_ascii=False)
-    )
+    user_prompt = build_user_prompt(config, context, sources)
 
-    if not torch.cuda.is_available():
-        raise RuntimeError("CUDA GPU를 사용할 수 없습니다.")
-    
+
     set_seed(42)
 
     print(f"기업: {context['company_name']}")
     print(f"자료 종류: {bundle['dataset_type']}")
-    print(f"GPU: {torch.cuda.get_device_name(0)}")
+    print_runtime_info(device)
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
     print("모델 로딩 중...")
 
-    quantization = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.float16,
-    )
-
-    print("가중치 읽기 방식: pread")
-
-    # 설치된 라이브러리 파일은 수정하지 않습니다.
-    # 이 로딩 구간에서만 Transformers의 읽기 방식을 바꿉니다.
-    pread_open = partial(
-        safetensors.safe_open,
-        backend="pread",
-    )
-
-    with patch(
-        "transformers.modeling_utils.safe_open",
-        new=pread_open,
-    ):
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_ID,
-            quantization_config=quantization,
-            torch_dtype=torch.float16,
-            device_map={"": 0},
-            attn_implementation="sdpa",
-        )
-
-    model.eval()
+    model = load_model(MODEL_ID, device)
 
     print("모델 로딩 완료")
 
@@ -227,10 +251,10 @@ def main():
             "자료를 임의로 잘라내지 않고 실행을 중단합니다."
         )
 
-    inputs = inputs.to("cuda:0")
+    inputs = inputs.to(device)
 
-    torch.cuda.reset_peak_memory_stats()
-    torch.cuda.synchronize()
+    reset_memory_stats(device)
+    synchronize(device)
     started = time.perf_counter()
 
     with torch.inference_mode():
@@ -244,7 +268,7 @@ def main():
             pad_token_id=tokenizer.eos_token_id,
         )
 
-    torch.cuda.synchronize()
+    synchronize(device)
     elapsed = time.perf_counter() - started
 
     output_tokens = generated[0, input_tokens:]
@@ -284,12 +308,14 @@ def main():
     for key, value in scores.items():
         print(f"- {key}: {value}")
 
-    peak_memory = torch.cuda.max_memory_allocated() / (1024 ** 3)
+    peak_memory = peak_allocated_gib(device)
 
     record = {
         "schema_version": "1.0",
         "dataset_type": bundle["dataset_type"],
         "model_id": MODEL_ID,
+        "prompt_version": PROMPT_VERSION,
+        "device": str(device),
         "rubric_version": config["rubric_version"],
         "evaluation_mode": "automatic",
         "input_file": str(input_path),
@@ -306,6 +332,7 @@ def main():
         "input_tokens": input_tokens,
         "generated_tokens": int(output_tokens.numel()),
         "peak_allocated_memory_gib": peak_memory,
+        "current_allocated_memory_gib": current_allocated_gib(device),
     }
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -320,7 +347,7 @@ def main():
         )
 
     print(f"\n생성 시간: {elapsed:.2f}초")
-    print(f"PyTorch 최대 할당 메모리: {peak_memory:.3f} GiB")
+    print_memory_info(device)
     print("순위 연결: 아직 연결하지 않음")
     print(f"저장: {output_path}")
 
@@ -328,5 +355,5 @@ def main():
         raise SystemExit(1)
 
 
-if __name__ == "__main__": 
+if __name__ == "__main__":
     main()

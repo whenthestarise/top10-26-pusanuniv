@@ -1,15 +1,35 @@
 from __future__ import annotations
 
+import argparse
 import json
 import time
 
 import torch
 from transformers import (
-    AutoModelForCausalLM,
     AutoTokenizer,
-    BitsAndBytesConfig,
     set_seed,
 )
+
+if __package__:
+    from .llm_runtime import (
+        DEVICE_CHOICES,
+        load_model,
+        print_memory_info,
+        print_runtime_info,
+        reset_memory_stats,
+        select_device,
+        synchronize,
+    )
+else:
+    from llm_runtime import (
+        DEVICE_CHOICES,
+        load_model,
+        print_memory_info,
+        print_runtime_info,
+        reset_memory_stats,
+        select_device,
+        synchronize,
+    )
 
 
 MODEL_ID = "Qwen/Qwen3-1.7B"
@@ -48,38 +68,22 @@ USER_PROMPT = f"""
 
 
 def main() -> None:
-    if not torch.cuda.is_available():
-        raise RuntimeError("PyTorch가 GPU를 인식하지 못합니다.")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--device", choices=DEVICE_CHOICES, default="auto")
+    args = parser.parse_args()
+    device = select_device(args.device)
 
     set_seed(42)
 
-    print(f"GPU: {torch.cuda.get_device_name(0)}")
-    free_bytes, total_bytes = torch.cuda.mem_get_info()
-    print(f"전체 VRAM: {total_bytes / 1024**3:.2f} GiB")
-    print(f"사용 가능한 VRAM: {free_bytes / 1024**3:.2f} GiB")
+    print_runtime_info(device)
     print(f"모델: {MODEL_ID}")
     print("토크나이저와 모델을 불러옵니다. 첫 실행은 다운로드가 필요합니다.")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
-    quantization = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.float16,
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID,
-        quantization_config=quantization,
-        torch_dtype=torch.float16,
-        device_map={"": 0},
-        attn_implementation="sdpa",
-    )
-    model.eval()
+    model = load_model(MODEL_ID, device)
 
     print("모델 로딩 완료")
-    print(f"4비트 로딩: {getattr(model, 'is_loaded_in_4bit', False)}")
 
     messages = [
         {"role": "system", "content": SYSTEM_PROMPT},
@@ -93,13 +97,13 @@ def main() -> None:
         enable_thinking=False,
     )
 
-    inputs = tokenizer(text, return_tensors="pt").to("cuda:0")
+    inputs = tokenizer(text, return_tensors="pt").to(device)
 
     if inputs["input_ids"].shape[1] > 1024:
         raise ValueError("첫 시험 입력은 1,024토큰 이하로 제한합니다.")
 
-    torch.cuda.reset_peak_memory_stats()
-    torch.cuda.synchronize()
+    reset_memory_stats(device)
+    synchronize(device)
     started = time.perf_counter()
 
     with torch.inference_mode():
@@ -113,7 +117,7 @@ def main() -> None:
             pad_token_id=tokenizer.eos_token_id,
         )
 
-    torch.cuda.synchronize()
+    synchronize(device)
     elapsed = time.perf_counter() - started
 
     generated = output[0, inputs["input_ids"].shape[1]:]
@@ -126,12 +130,9 @@ def main() -> None:
     print(answer)
     print(f"\n생성 시간: {elapsed:.2f}초")
     print(f"생성 토큰 수: {generated.numel()}")
-    print(
-        "PyTorch 최대 할당 메모리: "
-        f"{torch.cuda.max_memory_allocated() / 1024**3:.2f} GiB"
-    )
+    print_memory_info(device)
 
-        # 원래 응답은 유지하고, 전체를 감싼 코드 블록만 제거합니다.
+    # 원래 응답은 유지하고, 전체를 감싼 코드 블록만 제거합니다.
     json_text = answer.strip()
     lines = json_text.splitlines()
 

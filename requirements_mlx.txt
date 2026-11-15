@@ -1,0 +1,4 @@
+mlx==0.32.4
+mlx-lm==0.32.2
+transformers[chat-template]==5.22.2
+PyYAML==6.0.3

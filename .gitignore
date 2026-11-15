@@ -10,8 +10,15 @@ __pycache__/
 .env.*
 !.env.example
 
-# 원본 및 생성 데이터: 우선 코드를 공유하고 데이터는 별도 관리
-data/
+# 원본·중간 데이터와 실행 기록은 별도 관리
+data/*
+!data/demo/
+data/demo/*
+!data/demo/model_top10_2026-11-15/
+data/demo/model_top10_2026-11-15/*
+!data/demo/model_top10_2026-11-15/TOP10_선정결과.md
+!data/demo/model_top10_2026-11-15/top10.json
+!data/demo/model_top10_2026-11-15/기업별_모델평가.csv
 reports/
 
 # 학습 모델 및 실행 로그

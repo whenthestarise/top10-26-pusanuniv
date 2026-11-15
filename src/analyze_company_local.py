@@ -7,11 +7,34 @@ from pathlib import Path
 
 import torch
 from transformers import (
-    AutoModelForCausalLM,
     AutoTokenizer,
-    BitsAndBytesConfig,
     set_seed,
 )
+
+if __package__:
+    from .llm_runtime import (
+        DEVICE_CHOICES,
+        current_allocated_gib,
+        load_model,
+        peak_allocated_gib,
+        print_memory_info,
+        print_runtime_info,
+        reset_memory_stats,
+        select_device,
+        synchronize,
+    )
+else:
+    from llm_runtime import (
+        DEVICE_CHOICES,
+        current_allocated_gib,
+        load_model,
+        peak_allocated_gib,
+        print_memory_info,
+        print_runtime_info,
+        reset_memory_stats,
+        select_device,
+        synchronize,
+    )
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -125,15 +148,14 @@ def validate_response(result: dict, company: dict) -> list[str]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--company-id", default="1")
+    parser.add_argument("--device", choices=DEVICE_CHOICES, default="auto")
     args = parser.parse_args()
+    device = select_device(args.device)
 
     company = load_company(args.company_id)
 
     # 응답 처리의 성공·실패와 관계없이 먼저 생성합니다.
     status_summary = build_status_summary(company)
-
-    if not torch.cuda.is_available():
-        raise RuntimeError("GPU를 사용할 수 없습니다.")
 
     set_seed(42)
 
@@ -185,26 +207,12 @@ def main() -> None:
     )
 
     print(f"분석 기업: {company['company_name']}")
-    print(f"GPU: {torch.cuda.get_device_name(0)}")
+    print_runtime_info(device)
     print("모델 로딩 중...")
 
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
 
-    quantization = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_compute_dtype=torch.float16,
-    )
-
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID,
-        quantization_config=quantization,
-        torch_dtype=torch.float16,
-        device_map={"": 0},
-        attn_implementation="sdpa",
-    )
-    model.eval()
+    model = load_model(MODEL_ID, device)
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -218,7 +226,7 @@ def main() -> None:
         enable_thinking=False,
     )
 
-    inputs = tokenizer(text, return_tensors="pt").to("cuda:0")
+    inputs = tokenizer(text, return_tensors="pt").to(device)
     input_tokens = inputs["input_ids"].shape[1]
 
     print(f"입력 토큰 수: {input_tokens}")
@@ -226,8 +234,8 @@ def main() -> None:
     if input_tokens > 4096:
         raise ValueError("시험 입력이 4,096토큰을 넘었습니다.")
 
-    torch.cuda.reset_peak_memory_stats()
-    torch.cuda.synchronize()
+    reset_memory_stats(device)
+    synchronize(device)
     started = time.perf_counter()
 
     with torch.inference_mode():
@@ -241,7 +249,7 @@ def main() -> None:
             pad_token_id=tokenizer.eos_token_id,
         )
 
-    torch.cuda.synchronize()
+    synchronize(device)
     elapsed = time.perf_counter() - started
 
     output_tokens = generated[0, input_tokens:]
@@ -288,6 +296,7 @@ def main() -> None:
         "company_id": company["company_id"],
         "company_name": company["company_name"],
         "model_id": MODEL_ID,
+        "device": str(device),
         "source_file": INPUT.name,
         "input_snapshot": company,
         "raw_response": answer,
@@ -298,9 +307,8 @@ def main() -> None:
         "elapsed_seconds": round(elapsed, 2),
         "input_tokens": input_tokens,
         "output_tokens": output_tokens.numel(),
-        "peak_allocated_gib": round(
-            torch.cuda.max_memory_allocated() / 1024**3, 3
-        ),
+        "peak_allocated_gib": peak_allocated_gib(device),
+        "current_allocated_gib": current_allocated_gib(device),
         "status_summary_from_input": status_summary,
         "format_warnings": format_warnings,
     }
@@ -312,7 +320,7 @@ def main() -> None:
         json.dump(record, file, ensure_ascii=False, indent=2)
 
     print(f"\n생성 시간: {elapsed:.2f}초")
-    print(f"PyTorch 최대 할당 메모리: {record['peak_allocated_gib']} GiB")
+    print_memory_info(device)
 
     if errors:
         print("구조·상태 검사: 실패")

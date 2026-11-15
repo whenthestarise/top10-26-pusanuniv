@@ -1,0 +1,21 @@
+{
+  "status": "candidate_for_provided_fact_reading",
+  "candidate": {
+    "candidate_id": "qwen3_4b_instruct",
+    "model_id": "mlx-community/Qwen3-4B-Instruct-2507-4bit",
+    "revision": "50d427756c6b1b2fe0c0a10f67fbda1fc8e82c1b",
+    "backend": "mlx",
+    "weights_bytes": 2263022417,
+    "source_url": "https://huggingface.co/mlx-community/Qwen3-4B-Instruct-2507-4bit",
+    "original_model_url": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-2507"
+  },
+  "functional_passed": 18,
+  "functional_count": 19,
+  "provided_data_passed": 6,
+  "provided_data_count": 6,
+  "functional_scoring_checks_passed": false,
+  "real_company_evaluation_accuracy_validated": false,
+  "company_scoring_enabled": false,
+  "ready_for_ranking": false,
+  "note": "사실 읽기와 가상 기능 검사 결과이며 실제 기업 점수의 정확도 검증이나 선정 완료가 아님"
+}

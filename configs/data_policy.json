@@ -1,0 +1,34 @@
+{
+  "policy_version": "user_sources_only_v1",
+  "rule": "실제 기업 평가에는 제공받은 자료만 사용; 외부 기업 자료 추가 금지; 가상 문장은 기능 검사 전용",
+  "raw_sources": {
+    "companies": {
+      "original_name": "buulgyeong_midsized_companies_total.csv",
+      "stored_name": "company_catalog.csv",
+      "sha256": "6a9a4c3c97cad122a480f4427556db07d1787eea207a2e606b149e8dcec6716d",
+      "bytes": 12829
+    },
+    "survey": {
+      "original_name": "지역기업 TOP10선발 설문조사(응답) (1).csv",
+      "stored_name": "survey_responses.csv",
+      "sha256": "a31055e8d9a997942adb2e8a78bb8a5141f2d0f4f277daede41270a40a5a3008",
+      "bytes": 15823
+    },
+    "pdf": {
+      "original_name": "직업만족도_AI분석_자료와프롬프트.pdf",
+      "stored_name": "직업만족도_AI분석_자료와프롬프트.pdf",
+      "sha256": "b2e61596a31dc6b00b5055257501b4ec85863a25a73e6bacf3437dd5292d5030",
+      "bytes": 665676
+    },
+    "selected50": {
+      "original_name": "부울경_중견기업50.xlsx",
+      "stored_name": "부울경_중견기업50.xlsx",
+      "sha256": "29b9e5753900a753626692203580fbdcab1276f18098d63adf16bb1badffd058",
+      "bytes": 19364
+    }
+  },
+  "processed_companies_sha256": "ee30f84cc6f2b9c2c5ee2423b3768ff4e1f551dd93b364276b9ddbd17b07c3f0",
+  "processed_selected50_sha256": "2d9fd3be91afea954db0636a05c322552dcca41c9fa93cb14270a45ce1a1cd0d",
+  "selection_rule": "원본 150개에서 연구팀이 선별한 50개를 평가하고 그 안에서 최종 10개 선정",
+  "salary_precedence": "새 엑셀 우선, PDF 값 병기, 새 엑셀 미확인 값은 미상 유지"
+}
